@@ -51,30 +51,74 @@ fun PBRPTheme(content: @Composable () -> Unit) {
     )
 }
 
+// Helper to hold retry combinations
+data class DeviceCandidate(val vendor: String, val codename: String)
+
 @Composable
 fun MainScreen() {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val api = remember { PbrpApi.create() }
     
-    // FIXED: Convert to lowercase (FOG -> fog) because GitHub URLs are case-sensitive
-    val deviceCodename = Build.DEVICE.lowercase()
+    // Raw values from Android System
+    val rawDevice = Build.DEVICE      // e.g. "FOG"
+    val rawVendor = Build.MANUFACTURER // e.g. "Xiaomi"
     
+    // Generate candidates (Priority: Lowercase -> Raw -> Uppercase)
+    // This solves the case-sensitivity issue on GitHub
+    val candidates = listOf(
+        DeviceCandidate(rawVendor.lowercase(), rawDevice.lowercase()), 
+        DeviceCandidate(rawVendor, rawDevice),                         
+        DeviceCandidate(rawVendor.uppercase(), rawDevice.uppercase())  
+    ).distinct()
+
     var builds by remember { mutableStateOf<DeviceBuilds?>(null) }
-    var status by remember { mutableStateOf("Checking support for ${deviceCodename}...") }
+    var maintainer by remember { mutableStateOf("Loading...") }
+    var deviceFullTitle by remember { mutableStateOf("") }
+    var detectedName by remember { mutableStateOf(rawDevice) } 
+    var status by remember { mutableStateOf("Scanning servers...") }
     var isLoading by remember { mutableStateOf(true) }
 
     LaunchedEffect(true) {
         scope.launch {
-            try {
-                builds = api.getBuilds(deviceCodename)
-                status = "Official Support Found"
-                isLoading = false
-            } catch (e: Exception) {
-                // FIXED: Show the actual error message for debugging
-                status = "Error: ${e.localizedMessage}\n(Target: ${deviceCodename})"
-                isLoading = false
+            var success = false
+            
+            // --- SMART RETRY LOOP ---
+            for (candidate in candidates) {
+                try {
+                    status = "Checking: ${candidate.codename}..."
+                    
+                    // 1. Try to fetch Builds JSON
+                    val result = api.getBuilds(candidate.codename)
+                    
+                    // If JSON exists, we found the device!
+                    builds = result
+                    detectedName = candidate.codename
+                    status = "Official Support Found"
+                    success = true
+                    
+                    // 2. Now try to fetch Metadata (Markdown) for Maintainer name
+                    // We do this inside a try/catch so missing markdown doesn't crash the app
+                    try {
+                        val markdownString = api.getDeviceInfo(candidate.vendor, candidate.codename).string()
+                        maintainer = parseMarkdownValue(markdownString, "maintainer")
+                        deviceFullTitle = parseMarkdownValue(markdownString, "title").replace("\"", "")
+                    } catch (e: Exception) {
+                        maintainer = "Unknown (Metadata missing)"
+                    }
+
+                    break // Stop looking, we found it!
+                    
+                } catch (e: Exception) {
+                    // This candidate failed (404), try next
+                    continue
+                }
             }
+
+            if (!success) {
+                status = "Device not found.\nChecked: ${candidates.joinToString { it.codename }}"
+            }
+            isLoading = false
         }
     }
 
@@ -101,14 +145,43 @@ fun MainScreen() {
                 .border(1.dp, Color.White.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
         ) {
             Column(modifier = Modifier.padding(16.dp)) {
-                Text("DETECTED DEVICE", fontSize = 10.sp, color = Color.Gray)
-                Text(
-                    text = deviceCodename.uppercase(), 
-                    fontSize = 24.sp, 
-                    fontWeight = FontWeight.Bold, 
-                    color = PBRP_Red
-                )
-                Text(text = status, color = Color.White, modifier = Modifier.padding(top = 4.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = detectedName.uppercase(), 
+                        fontSize = 24.sp, 
+                        fontWeight = FontWeight.Bold, 
+                        color = PBRP_Red,
+                        modifier = Modifier.weight(1f)
+                    )
+                    // Status Badge
+                    if (!isLoading && builds != null) {
+                        Text(
+                            text = "OFFICIAL",
+                            color = Color.Green,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier
+                                .background(Color.Green.copy(0.1f), RoundedCornerShape(4.dp))
+                                .padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+                
+                if (deviceFullTitle.isNotEmpty()) {
+                    Text(text = deviceFullTitle, color = Color.White, fontWeight = FontWeight.SemiBold)
+                }
+                
+                Spacer(modifier = Modifier.height(8.dp))
+                
+                // Maintainer Row
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Maintainer: ", color = Color.Gray, fontSize = 12.sp)
+                    Text(text = maintainer, color = Color.LightGray, fontWeight = FontWeight.Bold, fontSize = 12.sp)
+                }
+                
+                if (!isLoading && builds == null) {
+                     Text(text = status, color = Color.Red, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp))
+                }
             }
         }
 
@@ -147,6 +220,15 @@ fun MainScreen() {
     }
 }
 
+/**
+ * Regex parser to extract values from Jekyll Front Matter (Markdown)
+ */
+fun parseMarkdownValue(content: String, key: String): String {
+    val regex = Regex("$key:\\s*(.*)", RegexOption.IGNORE_CASE)
+    val match = regex.find(content)
+    return match?.groupValues?.get(1)?.trim() ?: "Unknown"
+}
+
 @Composable
 fun BuildItem(build: BuildInfo, isLatest: Boolean, onDownload: (String) -> Unit) {
     val borderColor = if (isLatest) PBRP_Red else Color.White.copy(alpha = 0.1f)
@@ -180,9 +262,22 @@ fun BuildItem(build: BuildInfo, isLatest: Boolean, onDownload: (String) -> Unit)
             
             Text(text = build.date, fontSize = 12.sp, color = Color.Gray, modifier = Modifier.padding(vertical = 4.dp))
             
+            if (build.changelog != null) {
+                Text(
+                    text = build.changelog.replace("-", "• "), 
+                    fontSize = 12.sp, 
+                    color = Color.LightGray, 
+                    maxLines = 3,
+                    modifier = Modifier.padding(vertical = 8.dp)
+                )
+            }
+
             Button(
                 onClick = { onDownload(build.downloadLink) },
-                colors = ButtonDefaults.buttonColors(containerColor = PBRP_Red),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = PBRP_Red,
+                    contentColor = Color.White
+                ),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 shape = RoundedCornerShape(8.dp)
             ) {

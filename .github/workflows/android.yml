@@ -1,0 +1,90 @@
+name: Build & Release Signed APK
+
+on:
+  push:
+    branches: [ "main" ]
+  workflow_dispatch:
+    inputs:
+      create_release:
+        description: 'Create GitHub Release'
+        required: true
+        default: false
+        type: boolean
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Extract Version from Gradle
+      id: extract_version
+      run: |
+        VERSION_NAME=$(grep 'versionName' app/build.gradle.kts | awk -F'"' '{print $2}')
+        echo "Detected Version: $VERSION_NAME"
+        echo "APP_VERSION=$VERSION_NAME" >> $GITHUB_ENV
+
+    - uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.5'
+
+    - name: Decode Keystore
+      env:
+        ENCODED_STRING: ${{ secrets.KEYSTORE_BASE64 }}
+      run: |
+        echo $ENCODED_STRING | base64 -di > app/release-key.jks
+
+    - name: Build Signed Release APK
+      env:
+        KEYSTORE_PATH: release-key.jks 
+        KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+        KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+      run: gradle assembleRelease --no-daemon --stacktrace
+
+    - name: Rename APK
+      run: |
+        mv app/build/outputs/apk/release/app-release.apk app/build/outputs/apk/release/PBRP-v${{ env.APP_VERSION }}.apk
+
+    # --- DELETE OLD RELEASE ---
+    - name: Delete Existing Release
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release == true }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        TAG_NAME="v${{ env.APP_VERSION }}"
+        echo "Attempting to delete release and tag: $TAG_NAME"
+        gh release delete $TAG_NAME --cleanup-tag --yes || true
+        # Wait a moment to ensure GitHub processes the deletion
+        sleep 5
+
+    # --- CREATE NEW RELEASE ---
+    - name: Create GitHub Release
+      if: ${{ github.event_name == 'workflow_dispatch' && inputs.create_release == true }}
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: v${{ env.APP_VERSION }}
+        name: Release v${{ env.APP_VERSION }}
+        files: app/build/outputs/apk/release/PBRP-v${{ env.APP_VERSION }}.apk
+        draft: false
+        prerelease: false
+        generate_release_notes: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    # --- ARTIFACT UPLOAD ---
+    - name: Upload APK to Actions Tab
+      uses: actions/upload-artifact@v4
+      with:
+        name: PBRP-v${{ env.APP_VERSION }}
+        path: app/build/outputs/apk/release/PBRP-v${{ env.APP_VERSION }}.apk

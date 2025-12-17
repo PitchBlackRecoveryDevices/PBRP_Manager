@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="pbrp_black">#1D1D1E</color>
+    <color name="pbrp_red">#D32F2F</color>
+    <color name="pbrp_purple">#9400D3</color>
+    <color name="white">#FFFFFF</color>
+</resources>

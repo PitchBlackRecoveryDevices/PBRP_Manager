@@ -1,0 +1,83 @@
+<resources>
+    <string name="app_name">PBRP Manager</string>
+    
+    <!-- Navigation -->
+    <string name="nav_home">Home</string>
+    <string name="nav_search">Search</string>
+    <string name="nav_tools">Tools</string>
+
+    <!-- General -->
+    <string name="loading">Loading...</string>
+    <string name="unknown">Unknown</string>
+    <string name="close">Close</string>
+    <string name="download">Download</string>
+    <string name="github">GitHub</string>
+    <string name="open_sourceforge">Open SourceForge</string>
+
+    <!-- Home Screen -->
+    <string name="selected_device">SELECTED DEVICE</string>
+    <string name="detected_device">DETECTED DEVICE</string>
+    <string name="scanning_servers">Scanning servers...</string>
+    <string name="checking_device">Checking: %1$s...</string>
+    <string name="status_official_found">Official Support Found</string>
+    <string name="status_official_db_only">Official (Database Only)</string>
+    <string name="status_not_supported">Device not officially supported.</string>
+    <string name="status_connection_failed">Connection Failed</string>
+    <string name="status_metadata_error">Unknown (Metadata Error)</string>
+    
+    <string name="maintainer_label">Maintainer</string>
+    <string name="install_guide_btn">Installation Guide</string>
+    <string name="install_guide_title">How to Install</string>
+    <string name="no_guide_found">No specific guide found.</string>
+
+    <string name="latest_release">LATEST RELEASE</string>
+    <string name="older_versions">OLDER VERSIONS</string>
+
+    <!-- Fallback & Errors -->
+    <string name="fallback_title">Build Index Unavailable</string>
+    <string name="fallback_desc">This device is supported, but the update index is missing. You can check the file server manually.</string>
+    <string name="error_device_not_found">Device Not Found</string>
+    <string name="error_device_not_supported">This device is not officially supported by PBRP yet.</string>
+
+    <!-- Search Screen -->
+    <string name="search_hint">Search Devices...</string>
+    
+    <!-- Tools Screen -->
+    <string name="tools_title">Advanced Tools</string>
+    <string name="root_granted">Root Access Granted</string>
+    <string name="root_denied">Root Access Denied</string>
+    <string name="tools_section_power">Power Menu</string>
+    <string name="tools_section_flash">Flashing</string>
+    <string name="tools_reboot_system">Reboot System</string>
+    <string name="tools_reboot_recovery">Reboot Recovery</string>
+    <string name="tools_reboot_bootloader">Reboot Bootloader</string>
+    <string name="tools_flash_desc">Native flashing coming soon. Use TWRP/PBRP recovery to flash zip files.</string>
+    <string name="tools_root_required">You need Magisk or KernelSU to use these tools.</string>
+
+    <!-- Install Steps (Parsed) -->
+    <string name="step_fastboot_1">Reboot device to Bootloader/Fastboot mode.</string>
+    <string name="step_fastboot_2">Run: fastboot boot pbrp.img</string>
+    <string name="step_fastboot_3">Copy zip to device</string>
+    <string name="step_fastboot_4">Flash Zip in Recovery</string>
+    
+    <string name="step_odin_1">Reboot to Download Mode.</string>
+    <string name="step_odin_2">Open Odin on PC.</string>
+    <string name="step_odin_3">Select .tar.md5 in AP slot.</string>
+    <string name="step_odin_4">Uncheck \'Auto Reboot\'.</string>
+    <string name="step_odin_5">Click Start &amp; Manually Reboot.</string>
+    
+    <string name="step_mtk_1">Use SP Flash Tool.</string>
+    <string name="step_mtk_2">Load Scatter file.</string>
+    <string name="step_mtk_3">Select only Recovery partition.</string>
+    <string name="step_mtk_4">Click Download.</string>
+    
+    <string name="step_generic_1">Download Zip.</string>
+    <string name="step_generic_2">Reboot to current Recovery.</string>
+    <string name="step_generic_3">Flash Zip.</string>
+    <string name="step_generic_4">Reboot.</string>
+
+    <!-- Download Utils -->
+    <string name="download_desc">Downloading PBRP...</string>
+    <string name="download_started">Download started!</string>
+    <string name="opening_browser">Opening Browser...</string>
+</resources>

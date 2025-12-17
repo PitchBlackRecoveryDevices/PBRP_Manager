@@ -2,11 +2,11 @@ package com.pbrp.manager
 
 import android.app.DownloadManager
 import android.content.Context
+import android.content.Intent
 import android.net.Uri
 import android.os.Environment
 import android.widget.Toast
 import java.io.DataOutputStream
-import android.content.Intent
 
 object RootUtils {
     fun isRooted(): Boolean {
@@ -37,14 +37,15 @@ object DownloadUtils {
         try {
             val request = DownloadManager.Request(Uri.parse(url))
                 .setTitle(fileName)
-                .setDescription("Downloading PBRP...")
+                .setDescription(context.getString(R.string.download_desc))
                 .setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
                 .setDestinationInExternalPublicDir(Environment.DIRECTORY_DOWNLOADS, fileName)
+
             val dm = context.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
             dm.enqueue(request)
-            Toast.makeText(context, "Download started!", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.download_started), Toast.LENGTH_SHORT).show()
         } catch (e: Exception) {
-            Toast.makeText(context, "Opening Browser...", Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, context.getString(R.string.opening_browser), Toast.LENGTH_SHORT).show()
             context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url)))
         }
     }
